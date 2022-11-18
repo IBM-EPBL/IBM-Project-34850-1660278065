@@ -1,0 +1,116 @@
+
+
+    def save(self, has_key_by_default=False):
+        if self.SSN is None or has_key_by_default:
+            db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def format(self):
+        return {
+            "SSN": self.SSN,
+            "full_name": self.full_name,
+            "user_name": self.user_name,
+            "date_of_birth": self.DOB,
+            "phone": self.phone
+        }
+
+
+class Vehicle(db.Model):
+    __tablename__ = "vehicles"
+    plate_number = db.Column(db.Integer, primary_key=True)
+    container_size = db.Column(db.Float)
+    tank_level = db.Column(db.Float)
+    tank_size = db.Column(db.Float)
+    employee_SSN = db.Column(db.BigInteger, db.ForeignKey('employees.SSN'))
+    baskets = db.relationship('Basket', secondary=collect, lazy=True, backref=db.backref('baskets'))
+
+    def save(self, has_key_by_default=False):
+        if self.plate_number is None or has_key_by_default:
+            db.session.add(self)
+        db.session.commit()
+
+    def format(self):
+        return {
+            "plate_number": self.plate_number,
+            "container_size": self.container_size,
+            "tank_level": self.tank_level,
+            "tank_size": self.tank_size,
+            "driver": self.driver.format() if self.driver else {}
+        }
+
+
+class Waste(db.Model):
+    __tablename__ = "wastes"
+    id = db.Column(db.Integer, primary_key=True)
+    size = db.Column(db.Float)
+    type = db.Column(db.String)
+    DOC = db.Column(db.DateTime, nullable=False)
+    basket_id = db.Column(db.Integer, db.ForeignKey('baskets.id'), nullable=True)
+
+    def save(self, has_key_by_default=False):
+        if self.id is None or has_key_by_default:
+            db.session.add(self)
+            db.session.add(self.basket)
+        db.session.commit()
+        return self
+
+    def format(self):
+        return {
+            "basket_id": self.basket_id,
+            "size": self.size,
+            "type": self.type,
+            "date_of_creation": self.DOC
+        }
+
+    def delete(self):
+        db.session.commit()
+
+
+class SoftwareVersion(db.Model):
+    __tablename__ = "software_versions"
+    version = db.Column(db.String(), primary_key=True)
+    file = db.Column(db.LargeBinary())
+    date = db.Column(db.DateTime, server_default=db.func.now())
+    basket_id = db.Column(db.Integer, db.ForeignKey('baskets.id'), nullable=True, primary_key=True)
+
+    def save(self, has_key_by_default=False):
+        if self.version is None or has_key_by_default:
+            db.session.add(self)
+        db.session.commit()
+        return self
+
+    def format(self, status):
+        return {
+            "version": self.version,
+            "date": self.date,
+            "status": status
+        }
+
+    def delete(self):
+        db.session.commit()
+
+
+class BasketType(db.Model):
+    __tablename__ = "basketsTypes"
+    id = db.Column(db.Integer, primary_key=True)
+    length = db.Column(db.Integer, nullable=False)
+    width = db.Column(db.Integer, nullable=False)
+    height = db.Column(db.Integer, nullable=False)
+    micro_controller = db.Column(db.String, nullable=False)
+    basket = db.relationship('Basket', lazy=True, backref=db.backref('basketType', lazy=True))
+
+    def save(self):
+        if self.id is None:
+            db.session.add(self)
+        db.session.commit()
+        return self
+
+    def format(self):
+        return {    
+            "name": "{}*{}*{}/{}".format(self.length, self.width, self.height, self.micro_controller),
+            "value": self.id
+        }
