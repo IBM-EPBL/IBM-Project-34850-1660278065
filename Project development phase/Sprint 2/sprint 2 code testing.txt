@@ -1,0 +1,102 @@
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from datetime import datetime
+
+db = SQLAlchemy()
+
+
+def setup_db(app):
+    db.app = app
+    db.init_app(app)
+    migrate = Migrate(app, db)
+
+
+def commit():
+    db.session.commit()
+
+
+collect = db.Table('collect',
+                   db.Column('plate_number', db.Integer, db.ForeignKey('vehicles.plate_number'), primary_key=True),
+                   db.Column('basket_id', db.Integer, db.ForeignKey('baskets.id'), primary_key=True),
+                   db.Column('DOC', db.DateTime, primary_key=True)
+                   )
+
+complaint = db.Table('complaint',
+                     db.Column('user_name', db.String, db.ForeignKey('users.user_name'), primary_key=True),
+                     db.Column('basket_id', db.Integer, db.ForeignKey('baskets.id'), primary_key=True),
+                     db.Column('date_of_compliant', db.DateTime, primary_key=True),
+                     db.Column('compliant_message', db.String),
+                     )
+
+
+class Basket(db.Model):
+    __tablename__ = 'baskets'
+    id = db.Column(db.Integer, primary_key=True)
+    longitude = db.Column(db.Float, nullable=False)
+    latitude = db.Column(db.Float, nullable=False)
+    software_version = db.Column(db.String, nullable=False, default="0.0.0")
+    wastes_height = db.Column(db.Integer, nullable=False, default=0)
+    wastes = db.relationship('Waste', lazy=True, backref=db.backref('basket', lazy=True))
+    software_versions = db.relationship('SoftwareVersion', lazy=True, backref=db.backref('basket', lazy=True))
+    type = db.Column(db.Integer, db.ForeignKey('basketsTypes.id'), nullable=False)
+    area_code = db.Column(db.Integer, db.ForeignKey('areas.code'), nullable=False)
+
+    def save(self):
+        if self.id is None:
+            db.session.add(self)
+        db.session.commit()
+        return self
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def format(self):
+        return {
+            "id": self.id,
+            "longitude": self.longitude,
+            "latitude": self.latitude,
+            "software_version": self.software_version,
+            "micro_controller": self.basketType.micro_controller,
+            "level": "{}%".format(self.get_basket_level())
+        }
+
+    def set_wastes_height(self, waste_height):
+        if waste_height <= (self.basketType.height - self.wastes_height):
+            self.wastes_height += waste_height
+            return False
+        return True
+
+    def get_waste_volume(self, height):
+        return (self.length * self.width * float(height)) / 1000000
+
+    def get_basket_level(self):
+        return int((self.wastes_height / self.basketType.height) * 100)
+
+
+class Area(db.Model):
+    __tablename__ = "areas"
+    code = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, unique=True, nullable=False)
+    size = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.String, nullable=False)
+    latitude = db.Column(db.String, nullable=False)
+    city = db.Column(db.String, nullable=False)
+    baskets = db.relationship('Basket', lazy=False, backref=db.backref('area'))
+    users = db.relationship('User', backref=db.backref('area'))
+
+    def save(self, has_key_by_default=False):
+        if self.code is None or has_key_by_default:
+            db.session.add(self)
+        db.session.commit()
+
+    def format(self):
+        return {
+            "area_code": self.code,
+            "area_name": self.name,
+            "area_size": self.size,
+            "longitude": self.longitude,
+            "latitude": self.latitude,
+            "city": self.city
+        }
+        }
