@@ -1,0 +1,35 @@
+ BLINKING LED
+
+import time
+import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(11, GPIO.OUT)
+while True:
+	GPIO.output(11,True)
+  time.sleep(5)
+  GPIO.output(11,False)
+  time.sleep(5)
+
+
+
+TRAFFIC LIGHT
+
+//from gpiozero import Button, TrafficLights, Buzzer    
+from gpiozero import TrafficLights
+from time import sleep    
+    
+//buzzer = Buzzer(15)    
+//button = Button(21)    
+lights = TrafficLights(25, 8, 7)    
+    
+while True:    
+           //button.wait_for_press()   
+           //buzzer.on()   
+           light.green.on()    
+           sleep(5)    
+           lights.amber.on()    
+           sleep(5)    
+           lights.red.on()    
+           sleep(5)    
+           lights.off()   
+           //buzzer.off()
